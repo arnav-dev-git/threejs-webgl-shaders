@@ -5,9 +5,11 @@
 //vertex shader
 const vShader = `
   varying vec2 v_uv;
+  varying float v_size_factor;
   void main(){
     v_uv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position * 0.4, 1.0);
+    v_size_factor = 0.4;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position * v_size_factor, 1.0);
   }
 `;
 
@@ -19,6 +21,8 @@ const fShader = `
   varying vec2 v_uv;
   uniform vec2 u_resolution;
   uniform float u_time;
+
+  varying float v_size_factor;
 
   //& getting th points to make a rectangle
   float rect(vec2 pt, vec2 anchor, vec2 size, vec2 center, float smooth)  
@@ -41,14 +45,19 @@ const fShader = `
     float c = cos(theta);
     return mat2(c, -s, s, c);
   }
+
+  //& scaling function
+  mat2 getScaleMatrix(float scale){
+    return mat2(scale, 0.0, 0.0, scale);
+  }
  
 
   void main()
   {
     float tilecount = 10.0;
 
-    float smoothEdge = 0.02;
-    // float smoothEdge = 0.005 + 0.005 * v_uv.x * v_uv.y;
+    // float smoothEdge = 0.02;
+    float smoothEdge =  0.002 * tilecount + v_size_factor * 0.001;
 
     vec2 center = vec2(0.5, 0.5);
 
@@ -79,16 +88,16 @@ document.body.appendChild(renderer.domElement);
 const geometry = new THREE.PlaneGeometry(2, 2);
 
 const uniform = {
-    u_color: { value: new THREE.Color(0x00ff00) },
-    u_time: { value: 0.0 },
-    u_mouse: { value: { x: 0.0, y: 0.0 } },
-    u_resolution: { value: { x: 0.0, y: 0.0 } },
+  u_color: { value: new THREE.Color(0x00ff00) },
+  u_time: { value: 0.0 },
+  u_mouse: { value: { x: 0.0, y: 0.0 } },
+  u_resolution: { value: { x: 0.0, y: 0.0 } },
 };
 
 const material = new THREE.ShaderMaterial({
-    vertexShader: vShader,
-    fragmentShader: fShader,
-    uniforms: uniform,
+  vertexShader: vShader,
+  fragmentShader: fShader,
+  uniforms: uniform,
 });
 const plane = new THREE.Mesh(geometry, material);
 scene.add(plane);
@@ -100,46 +109,46 @@ animate();
 
 //End of your code
 function animate() {
-    requestAnimationFrame(animate);
-    renderer.render(scene, camera);
-    onWindowResize();
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+  onWindowResize();
 
-    uniform.u_time.value = clock.getElapsedTime();
+  uniform.u_time.value = clock.getElapsedTime();
 }
 
 //set mouse coordinates
 function move(e) {
-    uniform.u_mouse.value.x = e.touches ? e.touches[0].clientX : e.clientX;
-    uniform.u_mouse.value.y = e.touches ? e.touches[0].clientY : e.clientY;
+  uniform.u_mouse.value.x = e.touches ? e.touches[0].clientX : e.clientX;
+  uniform.u_mouse.value.y = e.touches ? e.touches[0].clientY : e.clientY;
 }
 
 if ("ontouchStart" in window) {
-    document.addEventListener("touchmove", move);
+  document.addEventListener("touchmove", move);
 } else {
-    document.addEventListener("resize", onWindowResize, false);
-    document.addEventListener("mousemove", move);
+  document.addEventListener("resize", onWindowResize, false);
+  document.addEventListener("mousemove", move);
 }
 
 function onWindowResize(event) {
-    const aspectRatio = window.innerWidth / window.innerHeight;
-    let width, height;
-    if (aspectRatio >= 1) {
-        width = 1;
-        height = (window.innerHeight / window.innerWidth) * width;
-    } else {
-        width = aspectRatio;
-        height = 1;
-    }
-    camera.left = -width;
-    camera.right = width;
-    camera.top = height;
-    camera.bottom = -height;
+  const aspectRatio = window.innerWidth / window.innerHeight;
+  let width, height;
+  if (aspectRatio >= 1) {
+    width = 1;
+    height = (window.innerHeight / window.innerWidth) * width;
+  } else {
+    width = aspectRatio;
+    height = 1;
+  }
+  camera.left = -width;
+  camera.right = width;
+  camera.top = height;
+  camera.bottom = -height;
 
-    if (uniform.u_resolution !== undefined) {
-        uniform.u_resolution.value.x = window.innerWidth;
-        uniform.u_resolution.value.y = window.innerHeight;
-    }
+  if (uniform.u_resolution !== undefined) {
+    uniform.u_resolution.value.x = window.innerWidth;
+    uniform.u_resolution.value.y = window.innerHeight;
+  }
 
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
 }

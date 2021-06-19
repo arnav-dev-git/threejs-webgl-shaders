@@ -24,35 +24,34 @@ uniform vec2 u_resolution;
 varying vec3 v_position;
 varying vec2 v_uv;
 
-#define TIME(x) sin(u_time * x)
+#define t_flow sin(u_time)
 #define PI 3.141592653589793
 
 uniform sampler2D u_texture;
 
+vec2 rotate(vec2 pt, float theta, float aspect)
+{
+  float s = sin(theta);
+  float c = cos(theta);
+  mat2 mat = mat2(c, s, -s, c);
+  pt.y /= aspect;
+  pt = mat * pt;
+  pt.y *= aspect;
+  return pt;
+}
+
 float inRect(vec2 pt, vec2 bottomLeft, vec2 topRight)
 {
-  vec2 s = smoothstep(bottomLeft, bottomLeft + vec2(0.005), pt) -
-           smoothstep(topRight, topRight + vec2(0.005), pt);
+  vec2 s = step(bottomLeft, pt) - step(topRight, pt);
   return s.x * s.y;
 }
 
-
 void main(){
+  // vec2 center = vec2(0.5);
+  // vec2 uv = rotate(v_uv - center, PI/2., 2.0/1.5) + center;
+  vec3 color = texture2D(u_texture, v_uv).rgb;
 
-  vec2 p = v_position.xy;
-  float len = length(p);
-
-  vec2 ripple = v_uv + p/cos(len*1.0 - u_time*1.0) + cos(len*22.0 - u_time*4.0);
-
-  vec2 uv = mix(ripple, v_uv, 0.99);
-
-  float t = inRect(uv, vec2(0.0), vec2(1.0));
-
-  vec3 color = texture2D(u_texture, uv).rgb;
-
-  // vec3 color = mix(vec3(0.5, 0.3, 0.5) , vec3(1.0, 0.5, 0.2) , uv.x + uv.y);
-
-  gl_FragColor = vec4(mix(vec3(0.0), color, t), 1.0); 
+  gl_FragColor = vec4(color, 1.0); 
 }
 `;
 
@@ -73,7 +72,7 @@ const uniforms = {
   u_mouse: { value: { x: 0.0, y: 0.0 } },
   u_resolution: { value: { x: 0, y: 0 } },
   u_texture: {
-    value: new THREE.TextureLoader().setPath("./assets/").load("img2.jpg"),
+    value: new THREE.TextureLoader().setPath("./assets/").load("img1.jpg"),
   },
 };
 

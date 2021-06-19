@@ -83,9 +83,9 @@ void main (void)
 
   color += circle(v_uv, vec2(0.4, 0.6), 0.01, true, 0.2) * vec3(0.0, sin(u_time * 3.0), 0.0);
   color += circle(v_uv, vec2(0.6, 0.4), 0.01, true, 0.2) * vec3(0.0, cos(u_time * 3.0), 0.0);
-  color += circle(v_uv, vec2(0.533, 0.561), 0.01, true, 0.2) * vec3(0.0, cos(u_time * 3.0), 0.0);
-  color += circle(v_uv, vec2(0.765, 0.200), 0.01, true, 0.2) * vec3(0.0, cos(u_time * 3.0), 0.0);
-  color += circle(v_uv, vec2(clamp(sin(u_time * 0.2) + cos(u_time * 0.4), 0.2, 0.7), clamp(cos(u_time * 0.2), 0.2, 0.7)), 0.01, true, 0.2) * vec3(tan(u_time * 3.0), 0.0, 0.0);
+  color += circle(v_uv, vec2(0.533, 0.561), 0.01, true, 0.2) * vec3(0.0, cos(u_time * 3.0) * sin(u_time * 3.0), 0.0);
+  color += circle(v_uv, vec2(0.765, 0.200), 0.01, true, 0.2) * vec3(0.0, cos(u_time * 4.0), 0.0);
+  color += circle(v_uv, vec2(clamp(sin(u_time * 0.2) + cos(u_time * 0.4), 0.2, 0.7), clamp(cos(u_time * 0.2), 0.2, 0.7)), 0.01, true, 0.2) * vec3(tan(u_time * 6.0), 0.0, 0.0);
   gl_FragColor = vec4(color, 1.0); 
 }
 `;

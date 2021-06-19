@@ -42,7 +42,10 @@ void main(){
   vec2 p = v_position.xy;
   float len = length(p);
 
-  vec2 ripple = v_uv + p/cos(len*1.0 - u_time*1.0) + cos(len*22.0 - u_time*4.0);
+  vec2 ripple = v_uv + p/3.0 + cos(len*12.0 - u_time*2.0);
+
+  // vec2 ripple = v_uv + p/tan(u_time) + cos(len*22.0 - u_time*4.0); //cool effect 1
+  // vec2 ripple = v_uv + p/cos(len*1.0 - u_time*1.0) + cos(len*22.0 - u_time*4.0); //cool effect 2
 
   vec2 uv = mix(ripple, v_uv, 0.99);
 

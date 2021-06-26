@@ -11,8 +11,8 @@ const vShader = `
   void main(){
     v_uv = uv;
     v_position = position;
-    // v_size_factor = 1.;
-    v_size_factor = 0.4;
+    v_size_factor = 1.;
+    // v_size_factor = 0.2;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position * v_size_factor, 1.0);
   }
 `;
@@ -21,63 +21,81 @@ const vShader = `
 
 //draw a circle out of a plane
 const fShader = `
-#extension GL_OES_standard_derivatives : enable
 
   varying vec2 v_uv;
   uniform vec2 u_resolution;
   uniform float u_time;
-  uniform float u_explosion;
 
   varying vec3 v_position;
 
-#define Color1 vec3(0.0)
-#define Color2 vec3(1.0)
+  //veriable global
+  #define NUMS_PARTICLE 100.0
+  #define NUMS_EXPLOSION 4.0
+  #define PI 3.14159265359
+  #define PI2 6.28318530718
 
+  //&cartesian coordinates -> square explosion
+  vec2 hash12(float t){
 
-#define Frequency 10.
+    float x = fract(sin(t * 674.3) * 453.2);
+    float y = fract(sin((t+x) * 714.3) * 263.2);
+    
+    return vec2(x, y);
+  }
 
-void main()
-{
-  vec3  AvgColor = vec3(0.0, 0.0,0.0);
-    vec3 color;
+  //&polar coordinates -> circular explosion
+  vec2 hash12_polar(float t){
 
-    vec2 TexCoord = v_position.xy;
-    // Determine the width of the projection of one pixel into s-t space
-    vec2 fw = fwidth(TexCoord);
+    float a = fract(sin(t * 674.3) * 453.2) * PI2;
+    float d = fract(sin((t+a) * 714.3) * 263.2);
+    
+    return vec2(sin(a), cos(a))*d;
+  }
 
-    // Determine the amount of fuzziness
-    // vec2 fuzz = fw * Frequency * 2.0;
-    vec2 fuzz = fw * 10. * 2.0;
+  float Explosion(vec2 uv, float t)
+  {
+    float sparkels = 0.0;
+    for(float i = 0.0; i < NUMS_PARTICLE; i+= 1.){
+      
+      // vec2 dir = hash12(i + 1.0) - 0.5;
+      vec2 dir = hash12_polar(i + 1.0)*0.5;
+      // float t = fract(u_time);
+      float d = length(uv - dir*t);
+      
+      float brightness = mix(0.0005, 0.002, smoothstep(0.1, 0.0, t));
 
-    float fuzzMax = max(fuzz.s, fuzz.t);
-
-    // Determine the position in the checkerboard pattern
-    vec2 checkPos = fract(TexCoord * Frequency);
-
-    if (fuzzMax < 0.5)
-    {
-
-        // If the filter width is small enough, compute the pattern color
-        vec2 p = smoothstep(vec2(0.5), fuzz + vec2(0.5), checkPos) +
-                (1.0 - smoothstep(vec2(0.0), fuzz, checkPos));
-
-        color = mix(Color1, Color2, p.x * p.y + (1.0 - p.x) * (1.0 - p.y));
-
-        // Fade in the average color when we get close to the limit
-        color = mix(color, AvgColor, smoothstep(0.125, 0.5, fuzzMax));
+      brightness *= sin(t*20. + i)*.5 + .5;
+      brightness *= smoothstep(1.0, 0.75, t);
+      
+      sparkels += brightness/d;
     }
-    else
-    {
-        // Otherwise, use only the average color
-        color = AvgColor;
-    }
+    return sparkels;
+  }
 
-    gl_FragColor = vec4(color, 1.0);
-}
+  void main(){
+    vec2  uv = (gl_FragCoord.xy - .5 * u_resolution.xy)/u_resolution.y;
+    vec3 col = vec3(0.0);    
+
+    for(float i = 0.0; i < NUMS_EXPLOSION; i++)
+    {
+      float t = u_time + i/NUMS_EXPLOSION;
+      float ft = floor(t);
+      vec3 color = sin(4.0 * vec3(0.34, 0.54, 0.43) * ft)*.25+.75;
+      
+      vec2 offs = hash12(i + 1.0 + ft) - 0.5;
+      offs *= vec2(1.77, 1.);
+
+      // col += 0.001/length(uv - offs);
+      // col *= 2.0;
+      col += Explosion(uv - offs, fract(t)) * color;
+    }
+   
+    gl_FragColor = vec4(col, 1.0);
+  }
 `;
 
 const scene = new THREE.Scene();
-const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 
 const clock = new THREE.Clock();
@@ -86,26 +104,23 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 const geometry = new THREE.PlaneGeometry(2, 2);
-// const geometry = new THREE.TorusKnotGeometry(0.4, 0.2, 200, 64);
 
 const uniform = {
   u_color: { value: new THREE.Color(0x00ff00) },
   u_time: { value: 0.0 },
   u_mouse: { value: { x: 0.0, y: 0.0 } },
   u_resolution: { value: { x: 0.0, y: 0.0 } },
-  u_explosion: { value: 5.0 },
 };
 
 const material = new THREE.ShaderMaterial({
   vertexShader: vShader,
   fragmentShader: fShader,
   uniforms: uniform,
-  opacity: true,
 });
 const plane = new THREE.Mesh(geometry, material);
 scene.add(plane);
 
-camera.position.z = 100;
+camera.position.z = 1;
 
 onWindowResize();
 animate();
@@ -116,7 +131,6 @@ function animate() {
   renderer.render(scene, camera);
   onWindowResize();
 
-  // plane.rotation.y += 0.01;
   uniform.u_time.value = clock.getElapsedTime();
 }
 

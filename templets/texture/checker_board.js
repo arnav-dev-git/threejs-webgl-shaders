@@ -44,6 +44,7 @@ const fShader = `
   void main() {
     // vec3 col = vec3(1.0, 0.5, 0.05);
 
+    // vec2 uv = v_uv * vec2(0.999999);
     vec2 uv = fract(v_uv * 20.0);
     
     // uv -= vec2(sin(u_time));

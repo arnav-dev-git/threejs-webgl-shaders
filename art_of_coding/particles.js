@@ -31,6 +31,8 @@ uniform vec2 u_mouse;
 
 varying vec3 v_position;
 
+vec2 p[9];
+
 
 float DistLine(vec2 p, vec2 a, vec2 b)
 {
@@ -72,23 +74,23 @@ vec2 GetPos(vec2 id, vec2 offset)
   return offset + sin(n) * 0.37;
 }
 
-float Line(vec2 p, vec2 a, vec2 b)
-{
-  float d = DistLine(p, a, b);
-  float m = S(0.02, 0.008, d);
-  float d2 = length(a - b);
-  m *= S(1.2, 0.8, d2) * 0.5 + S(0.05, 0.03, abs(d2 - 0.75));
-  return m;
-}
+void main() {
+  vec2  uv = (gl_FragCoord.xy - .5 * u_resolution.xy)/u_resolution.y;
+  
+  // float d = DistLine(uv, vec2(0.0), vec2(0.6));
+  // float m = S(0.1, 0.05, d);
 
-float Layer(vec2 uv)
-{
-  float m = 0.0;
+  // m = N22(uv).y;
+
+  uv *= 5.0;
 
   vec2 gv = fract(uv) - .5;
   vec2 id = floor(uv);
 
-  vec2 p[9];
+  // vec2 p = GetPos(id, vec2(0.01, 0.01));
+
+  // float d = length(gv - p);
+  // float m = S(.1, .05, d);
 
   int i = 0;
   for(float y=-1.0; y<=1.0; y++)
@@ -100,61 +102,78 @@ float Layer(vec2 uv)
     }
   }
 
-  float t = u_time * 10.0;
+  vec3 col = vec3(1.);
 
-  for(i = 0; i < 9; i++){
-    m += Line(gv, p[4], p[i]);
-
-    vec2 j = (p[i]- gv) * 15.0;
-    float sparkel = 1.0/dot(j, j);
-
-    m += sparkel * sin(sin(t + fract(p[i].x) * 10.0) * 0.5 + 0.5);
-  }
-  m += Line(gv, p[1], p[3]);
-  m += Line(gv, p[1], p[5]);
-  m += Line(gv, p[7], p[3]);
-  m += Line(gv, p[7], p[5]);
-
-  return m;
-}
-
-void main() {
-  vec2  uv = (gl_FragCoord.xy - .5 * u_resolution.xy)/u_resolution.y;
-  vec2 mouse = (u_mouse.xy / u_resolution.xy) - 0.5;
-
-  // float m = Layer(uv * 5.0);
-  float m = 0.0;
-
-  float t = u_time * 0.1;
-
-  float gradient = uv.y;
-
-  //!rotate uv
-  float s = sin(t);
-  float c = cos(t);
-  mat2 rotationMatrix = mat2(c, -s, s, c);
-
-  uv *= rotationMatrix;
-  mouse *= rotationMatrix;
-
-  for(float i = 0.; i < 1.; i += 1./4.)
-  {
-    float z = fract(i + t);
-    float size = mix(10.0, 0.5, z);
-    float fade = S(0., .5, z) * S(1., .8, z);
-    m += Layer(uv * size + i * 20. - mouse) * fade;
-  }
-
-  vec3 base_color = sin(t * 7.0 * vec3(0.234, 0.378, 0.649)) * 0.4 + 0.6;
-
-  vec3 col = vec3(m) * base_color;
-
-  col -= gradient * base_color * abs(sin(u_time) * 0.5);
-
-  // if(gv.x > .48 || gv.y > .48) col = vec3(1.0, 0.0, 0.0);
+  if(gv.x > .48 || gv.y > .48) col = vec3(1.0, 0.0, 0.0);
   gl_FragColor = vec4(col, 1.0);
 }
 `;
+
+class WEBGL {
+  static isWebGLAvailable() {
+    try {
+      const canvas = document.createElement("canvas");
+      return !!(
+        window.WebGLRenderingContext &&
+        (canvas.getContext("webgl") || canvas.getContext("experimental-webgl"))
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static isWebGL2Available() {
+    try {
+      const canvas = document.createElement("canvas");
+      return !!(window.WebGL2RenderingContext && canvas.getContext("webgl2"));
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static getWebGLErrorMessage() {
+    return this.getErrorMessage(1);
+  }
+
+  static getWebGL2ErrorMessage() {
+    return this.getErrorMessage(2);
+  }
+
+  static getErrorMessage(version) {
+    const names = {
+      1: "WebGL",
+      2: "WebGL 2",
+    };
+    const contexts = {
+      1: window.WebGLRenderingContext,
+      2: window.WebGL2RenderingContext,
+    };
+    let message =
+      'Your $0 does not seem to support <a href="http://khronos.org/webgl/wiki/Getting_a_WebGL_Implementation" style="color:#000">$1</a>';
+    const element = document.createElement("div");
+    element.id = "webglmessage";
+    element.style.fontFamily = "monospace";
+    element.style.fontSize = "13px";
+    element.style.fontWeight = "normal";
+    element.style.textAlign = "center";
+    element.style.background = "#fff";
+    element.style.color = "#000";
+    element.style.padding = "1.5em";
+    element.style.width = "400px";
+    element.style.margin = "5em auto 0";
+
+    if (contexts[version]) {
+      message = message.replace("$0", "graphics card");
+    } else {
+      message = message.replace("$0", "browser");
+    }
+
+    message = message.replace("$1", names[version]);
+    element.innerHTML = message;
+    return element;
+  }
+}
+THREE.WEBGL = WEBGL;
 
 const scene = new THREE.Scene();
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
@@ -163,10 +182,13 @@ const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
 const canvas = document.createElement("canvas");
 let context;
 
-context = canvas.getContext("webgl2", { antialias: false });
-// context = canvas.getContext("webgl", { antialias: false });
+if (WEBGL.isWebGL2Available()) {
+  context = canvas.getContext("webgl2", { antialias: false }); // disable AA if using post-processing
+} else {
+  context = canvas.getContext("webgl", { antialias: false });
+}
 
-const renderer = new THREE.WebGLRenderer({ canvas, context, antialias: true });
+const renderer = new WebGLRenderer({ canvas, context });
 
 const clock = new THREE.Clock();
 
